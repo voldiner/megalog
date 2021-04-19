@@ -1,0 +1,28 @@
+#ajax{
+    background-color: #fff;
+    background-image: url("../img/preloader.gif");
+    background-position: center top;
+    background-repeat: no-repeat;
+    opacity: 0.6;
+    border: 1px solid gray;
+    border-radius: 10px;
+    display: none;
+    left: 50%;
+    top: 50%;
+    padding: 80px 10px 10px;
+    position: fixed;
+    text-align: center;
+    width: 200px;
+    vertical-align: bottom;
+    z-index: 100;
+}
+#ajax span{
+    font-size: 1.3rem;
+    color: green;
+}
+.display-alert{
+    display: block;
+}
+.no-display-alert{
+    display: none;
+}
