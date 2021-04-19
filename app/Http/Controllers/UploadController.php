@@ -17,7 +17,7 @@ class UploadController extends Controller
 {
     public function addPost(Request $request)
     {
-        // ------- validation -------- //
+
         $rules = [
             'alias' => 'required',
             'result' => 'required|integer',
