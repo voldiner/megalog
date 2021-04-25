@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/','IndexController@index')->name('home');
 
 Route::get('/posts', 'IndexController@getPostsFromDates')->name('getPostsFromDates');
+Route::get('/control', 'IndexController@control');
 Route::get('/postsfromday', 'IndexController@getPostsFromDay')->name('getPostsFromDay');
 Route::get('/postsSort', 'UploadController@postsSort')->name('postsSort');
 

@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Category;
 use App\Folder;
+use App\Mail\ControlMail;
 use App\Post;
 use App\Station;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 
@@ -32,7 +34,7 @@ class IndexController extends Controller
                 $endDate = trim($dates_array[1]);
             }
         }
-        if (!isset($startDate,$endDate)){
+        if (!isset($startDate, $endDate)) {
             $startDate = Carbon::createFromTimestamp(time())->subDay(30)->format('d/m/Y');
             $endDate = Carbon::createFromTimestamp(time())->format('d/m/Y');
         }
@@ -154,5 +156,87 @@ class IndexController extends Controller
         return view('posts', compact('posts', 'date', 'ac', 'orderBy', 'ac_id', 'ajaxRoute'));
 
 
+    }
+
+    /**
+     *  перевірка умов відсутності повідомлень про синхронізацію
+     *  та при необхідності відправка листа з повідомленням на email
+     * викликається скриптом або через крон регулярно,
+     *  вертає json з інформацією про виконання
+     */
+    public function control()
+    {
+        $messageToMail = false;
+        $parameters = config('megalog');
+        $stations = Station::whereIn('id', $parameters['ac'])->get();
+        $folders = Folder::whereIn('name',['ftp', 'upload', 'free', 'reg'])->get();
+
+        //dump($stations, $folders);
+
+        foreach ($stations as $station){
+
+            $messageToMail = $this->checkStation($station,$folders,$parameters);
+
+        }
+
+        if ($messageToMail){
+            dump($messageToMail);
+            //Mail::to('yura.voldiner@gmail.com')->send(new ControlMail($messageToMail));
+            dump('висилаю пошту -> !');
+            return response()->json(['success' => true, 'message_send' => true], 200);
+        }
+        dump('все нормально !');
+        return response()->json(['success' => true, 'message_send' => false], 200);
+
+
+    }
+
+    public function checkStation($station, $folders, $parameters)
+    {
+        // --- 1. ftp  годину не було синхронізації он-лайн табло
+        // --- умова перевіряється з 8-00 до 20-00
+        // --- upload -------------------------------------
+        // --- не було завантажень більше 24 годин
+        // --- free ----------------------------------------
+        // --- не було завантажень більше 2 годин ----------
+        // --- reg ---
+        // --- більше доби
+        dump($folders);
+        $messageToMail = false;
+        foreach ($folders as $folder){
+            dump($folder->name);
+            dump($parameters[$folder->name]['hour_start'],$parameters[$folder->name]['hour_finish']);
+            if (Carbon::now()->hour > $parameters[$folder->name]['hour_start'] && Carbon::now()->hour < $parameters[$folder->name]['hour_finish']) {
+                //dd(44);
+                $date_check_carbon = Carbon::now()->subHour($parameters[$folder->name]['alert_hours']);
+                $date_check = $date_check_carbon->toDateString();
+                $time_check = $date_check_carbon->toTimeString();
+                //dump($date_check . $time_check);
+                $not_exist_posts = DB::table('posts')
+                    ->whereDate('created_at', '>=', $date_check)
+                    ->whereTime('created_at', '>=', $time_check)
+                    ->where('station_id', '=', $station->id)
+                    ->where('alias', '=', $folder->name)
+                    ->where('result', '=', 1)
+                    ->doesntExist();
+
+                if ($not_exist_posts) {
+                    dump('немає постів');
+                    $messageToMail[] = [
+                        'ac' => $station->title,
+                        'alias' => $folder->title,
+                        'time' => $parameters[$folder->name]['alert_hours'],
+                    ];
+
+                }else{
+                    dump('є пости');
+                }
+            }else{
+                dump('не час моніторингу');
+            }
+
+        }
+
+        return $messageToMail;
     }
 }
