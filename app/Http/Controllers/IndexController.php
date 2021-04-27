@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Category;
 use App\Folder;
 use App\Mail\ControlMail;
+use App\Message;
 use App\Post;
 use App\Station;
 use Carbon\Carbon;
@@ -166,23 +167,28 @@ class IndexController extends Controller
      */
     public function control()
     {
-        $messageToMail = false;
+        $messagesToMail = [];
         $parameters = config('megalog');
         $stations = Station::whereIn('id', $parameters['ac'])->get();
-        $folders = Folder::whereIn('name',['ftp', 'upload', 'free', 'reg'])->get();
-
-        //dump($stations, $folders);
+        $folders = Folder::whereIn('name',$parameters['category'])->get();
 
         foreach ($stations as $station){
+            $checkStation = $this->checkStation($station,$folders,$parameters);
 
-            $messageToMail = $this->checkStation($station,$folders,$parameters);
+            if ($checkStation){
+                $messagesToMail = array_merge($messagesToMail, $checkStation);
+            }
+
 
         }
 
-        if ($messageToMail){
-            dump($messageToMail);
-            //Mail::to('yura.voldiner@gmail.com')->send(new ControlMail($messageToMail));
+        if ($messagesToMail){
+            dump($messagesToMail);
+            Mail::to('yura.voldiner@gmail.com')->send(new ControlMail($messagesToMail));
             dump('висилаю пошту -> !');
+            foreach ($messagesToMail as $messageToMail){
+                $this->saveMessage($messageToMail);
+            }
             return response()->json(['success' => true, 'message_send' => true], 200);
         }
         dump('все нормально !');
@@ -201,8 +207,8 @@ class IndexController extends Controller
         // --- не було завантажень більше 2 годин ----------
         // --- reg ---
         // --- більше доби
-        dump($folders);
-        $messageToMail = false;
+
+        $messagesToMail = false;
         foreach ($folders as $folder){
             dump($folder->name);
             dump($parameters[$folder->name]['hour_start'],$parameters[$folder->name]['hour_finish']);
@@ -222,12 +228,15 @@ class IndexController extends Controller
 
                 if ($not_exist_posts) {
                     dump('немає постів');
-                    $messageToMail[] = [
-                        'ac' => $station->title,
-                        'alias' => $folder->title,
-                        'time' => $parameters[$folder->name]['alert_hours'],
-                    ];
-
+                    if ($this->checkMessage($station->id,$folder->name)){
+                        $messagesToMail[] = [
+                            'ac' => $station->title,
+                            'ac_id' => $station->id,
+                            'alias' => $folder->title,
+                            'alias_name' =>$folder->name,
+                            'time' => $parameters[$folder->name]['alert_hours'],
+                        ];
+                    }
                 }else{
                     dump('є пости');
                 }
@@ -237,6 +246,39 @@ class IndexController extends Controller
 
         }
 
-        return $messageToMail;
+        return $messagesToMail;
     }
+    /*
+     *перевірка - якщо по вказаній АС та по вказаному типу завантаження
+     * сьогодні вже повідомлення
+     * було відправлене двічі, то більше не відправляти.
+     *
+     */
+    public function checkMessage($stationId, $folderName)
+    {
+        return Message::where('station_id',$stationId)
+                            ->where('alias', $folderName)
+                            ->where('count_for_send', 1)
+                            ->whereDay('created_at', '=', Carbon::now()->day )
+                            ->doesntExist();
+
+    }
+    public function saveMessage($messageToMail)
+    {
+        dump(Carbon::now()->day);
+        $message = Message::where('station_id',$messageToMail['ac_id'])
+            ->where('alias', $messageToMail['alias_name'])
+            ->whereDay('created_at', Carbon::now()->day )
+            ->first();
+        //dump($message);
+        if ($message && $message->count_for_send === 0){
+            $message->update(['count_for_send' => 1]);
+        }else{
+            Message::create([
+                'station_id' => $messageToMail['ac_id'],
+                'alias' => $messageToMail['alias_name'],
+            ]);
+        }
+    }
+
 }
