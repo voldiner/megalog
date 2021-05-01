@@ -20,6 +20,7 @@ class CreatePostsTable extends Migration
             $table->string('error')->nullable();
             $table->integer('type_error')->unsigned()->nullable();
             $table->string('alias');
+            $table->integer('timestamp');
             $table->timestamps();
         });
     }

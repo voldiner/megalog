@@ -42,6 +42,7 @@ class UploadController extends Controller
             'alias' => $request->input('alias'),
             'files' => json_encode($request->input('files')),
             'station_id' => $request->input('station_id'),
+            'timestamp' => time()
         ];
 
         try {

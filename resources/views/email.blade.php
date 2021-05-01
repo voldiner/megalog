@@ -8,13 +8,18 @@
     <title>Megalog</title>
 </head>
 <body>
-    <h1> Це лист повідомлення {{ date("d-m-Y H:i:s") }}</h1>
-    @foreach($parameters as $parameter)
-
+<h1> Це лист повідомлення {{ date("d-m-Y H:i:s") }}</h1>
+@foreach($parameters as $parameter)
+    @if(isset($parameter['success']))
+        <p>Автостанція {{ $parameter['ac'] }}</p>
+        <p>вид синхронізації {{ $parameter['alias'] }}</p>
+        <p>синхронізація відновлена</p>
+    @else
         <p>Автостанція {{ $parameter['ac'] }}</p>
         <p>вид синхронізації {{ $parameter['alias'] }}</p>
         <p>не було синхронізації {{ $parameter['time'] }} годин</p>
+    @endif
 
-    @endforeach
+@endforeach
 </body>
 </html>

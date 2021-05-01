@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 
 class IndexController extends Controller
 {
+    public $errorMessages;
     public function index(Request $request)
     {
         // cookies поставили JS тому читаємо на PHP
@@ -171,20 +172,25 @@ class IndexController extends Controller
         $parameters = config('megalog');
         $stations = Station::whereIn('id', $parameters['ac'])->get();
         $folders = Folder::whereIn('name',$parameters['category'])->get();
+        // --- визначимо, чи є не закриті повідомлення про помилки
+        // --- на які треба повідомити про виправлення старіші за x днів ігноруємо
+        $dateIgnore = Carbon::now()->subDay($parameters['day_success_email'])->toDateString();
+        $this->errorMessages = Message::where('count_for_send', 1)
+            ->whereDate('created_at', '>=', $dateIgnore)
+            ->get();
+        dump($this->errorMessages);
 
         foreach ($stations as $station){
-            $checkStation = $this->checkStation($station,$folders,$parameters);
+            $checkStation = $this->checkStation($station,$folders,$parameters,$dateIgnore);
 
             if ($checkStation){
                 $messagesToMail = array_merge($messagesToMail, $checkStation);
             }
-
-
         }
 
         if ($messagesToMail){
             dump($messagesToMail);
-            Mail::to('yura.voldiner@gmail.com')->send(new ControlMail($messagesToMail));
+            Mail::to($parameters['email_alert'])->send(new ControlMail($messagesToMail));
             dump('висилаю пошту -> !');
             foreach ($messagesToMail as $messageToMail){
                 $this->saveMessage($messageToMail);
@@ -197,7 +203,7 @@ class IndexController extends Controller
 
     }
 
-    public function checkStation($station, $folders, $parameters)
+    public function checkStation($station, $folders, $parameters,$dateIgnore)
     {
         // --- 1. ftp  годину не було синхронізації он-лайн табло
         // --- умова перевіряється з 8-00 до 20-00
@@ -214,18 +220,26 @@ class IndexController extends Controller
             dump($parameters[$folder->name]['hour_start'],$parameters[$folder->name]['hour_finish']);
             if (Carbon::now()->hour > $parameters[$folder->name]['hour_start'] && Carbon::now()->hour < $parameters[$folder->name]['hour_finish']) {
                 //dd(44);
-                $date_check_carbon = Carbon::now()->subHour($parameters[$folder->name]['alert_hours']);
-                $date_check = $date_check_carbon->toDateString();
-                $time_check = $date_check_carbon->toTimeString();
+                $check_timestamp = Carbon::now()->subHour($parameters[$folder->name]['alert_hours'])->timestamp;
+
+                //$date_check = $date_check_carbon->toDateString();
+                //$time_check = $date_check_carbon->toTimeString();
                 //dump($date_check . $time_check);
-                $not_exist_posts = DB::table('posts')
+
+                /*$not_exist_posts =
+                    DB::table('posts')
                     ->whereDate('created_at', '>=', $date_check)
                     ->whereTime('created_at', '>=', $time_check)
                     ->where('station_id', '=', $station->id)
                     ->where('alias', '=', $folder->name)
                     ->where('result', '=', 1)
+                    ->doesntExist();*/
+                $not_exist_posts = DB::table('posts')
+                    ->where('timestamp', '>=', $check_timestamp)
+                    ->where('station_id', '=', $station->id)
+                    ->where('alias', '=', $folder->name)
+                    ->where('result', '=', 1)
                     ->doesntExist();
-
                 if ($not_exist_posts) {
                     dump('немає постів');
                     if ($this->checkMessage($station->id,$folder->name)){
@@ -238,6 +252,25 @@ class IndexController extends Controller
                         ];
                     }
                 }else{
+                    // -- перевірка якщо є пости після повідомлень про помилки, треба повідомити
+                    // -- про появу завантаження
+                    if ($this->needEmailToSuccess($station->id, $folder->name)){
+                            $messagesToMail[] = [
+                                'ac' => $station->title,
+                                'ac_id' => $station->id,
+                                'alias' => $folder->title,
+                                'alias_name' =>$folder->name,
+                                'time' => $parameters[$folder->name]['alert_hours'],
+                                'success' => true,
+                            ];
+                            // --- оновити лічильник
+                            Message::where('count_for_send', 1)
+                                ->whereDate('created_at', '>=', $dateIgnore)
+                                ->where('alias',$folder->name)
+                                ->where('station_id',$station->id)
+                                ->update(['count_for_send' => 2]);
+                    }
+
                     dump('є пости');
                 }
             }else{
@@ -265,13 +298,17 @@ class IndexController extends Controller
     }
     public function saveMessage($messageToMail)
     {
-        dump(Carbon::now()->day);
+        //dump(Carbon::now()->day);
+        if(isset($messageToMail['success'])){
+            return;
+        }
         $message = Message::where('station_id',$messageToMail['ac_id'])
             ->where('alias', $messageToMail['alias_name'])
+            ->where('count_for_send', 0)
             ->whereDay('created_at', Carbon::now()->day )
             ->first();
         //dump($message);
-        if ($message && $message->count_for_send === 0){
+        if ($message){
             $message->update(['count_for_send' => 1]);
         }else{
             Message::create([
@@ -279,6 +316,19 @@ class IndexController extends Controller
                 'alias' => $messageToMail['alias_name'],
             ]);
         }
+    }
+
+    public function needEmailToSuccess($station_id, $folder_name)
+    {
+        if ($this->errorMessages){
+            if($this->errorMessages
+                    ->where('station_id', $station_id)
+                    ->where('alias', $folder_name)
+                    ->count() > 0 ){
+                return true;
+            }
+        }
+        return false;
     }
 
 }
