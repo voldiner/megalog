@@ -13,10 +13,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Uapixart\LaravelTurbosms\Turbosms;
 
 class IndexController extends Controller
 {
     public $errorMessages;
+
     public function index(Request $request)
     {
         // cookies поставили JS тому читаємо на PHP
@@ -104,7 +106,6 @@ class IndexController extends Controller
             ->where('result', '=', 0)
             ->with(['station', 'category', 'folder'])
             ->orderBy($orderBy)
-            //->get();
             ->paginate(15);
         $ajaxRoute = route('getPostsFromDates');
         $dateTime_from = $request->from;
@@ -165,34 +166,41 @@ class IndexController extends Controller
      *  та при необхідності відправка листа з повідомленням на email
      * викликається скриптом або через крон регулярно,
      *  вертає json з інформацією про виконання
+     * https://github.com/mkuzmych/laravel-turbosms  відправка SMS
      */
     public function control()
     {
         $messagesToMail = [];
         $parameters = config('megalog');
         $stations = Station::whereIn('id', $parameters['ac'])->get();
-        $folders = Folder::whereIn('name',$parameters['category'])->get();
+        $folders = Folder::whereIn('name', $parameters['category'])->get();
         // --- визначимо, чи є не закриті повідомлення про помилки
-        // --- на які треба повідомити про виправлення старіші за x днів ігноруємо
+        // --- на які треба повідомити про виправлення старіші за $parameters['day_success_email'] днів ігноруємо
         $dateIgnore = Carbon::now()->subDay($parameters['day_success_email'])->toDateString();
         $this->errorMessages = Message::where('count_for_send', 1)
             ->whereDate('created_at', '>=', $dateIgnore)
             ->get();
         dump($this->errorMessages);
 
-        foreach ($stations as $station){
-            $checkStation = $this->checkStation($station,$folders,$parameters,$dateIgnore);
+        foreach ($stations as $station) {
+            $checkStation = $this->checkStation($station, $folders, $parameters, $dateIgnore);
 
-            if ($checkStation){
+            if ($checkStation) {
                 $messagesToMail = array_merge($messagesToMail, $checkStation);
             }
         }
 
-        if ($messagesToMail){
+        if ($messagesToMail) {
             dump($messagesToMail);
             Mail::to($parameters['email_alert'])->send(new ControlMail($messagesToMail));
+
+            if ($parameters['sendSMS']) {
+                $turboSMS = new Turbosms();
+                $turboSMS->send($parameters['phones'], $this->createMessageSMS($messagesToMail));
+            }
+
             dump('висилаю пошту -> !');
-            foreach ($messagesToMail as $messageToMail){
+            foreach ($messagesToMail as $messageToMail) {
                 $this->saveMessage($messageToMail);
             }
             return response()->json(['success' => true, 'message_send' => true], 200);
@@ -203,37 +211,17 @@ class IndexController extends Controller
 
     }
 
-    public function checkStation($station, $folders, $parameters,$dateIgnore)
+    public function checkStation($station, $folders, $parameters, $dateIgnore)
     {
-        // --- 1. ftp  годину не було синхронізації он-лайн табло
-        // --- умова перевіряється з 8-00 до 20-00
-        // --- upload -------------------------------------
-        // --- не було завантажень більше 24 годин
-        // --- free ----------------------------------------
-        // --- не було завантажень більше 2 годин ----------
-        // --- reg ---
-        // --- більше доби
 
         $messagesToMail = false;
-        foreach ($folders as $folder){
+        foreach ($folders as $folder) {
             dump($folder->name);
-            dump($parameters[$folder->name]['hour_start'],$parameters[$folder->name]['hour_finish']);
+            dump($parameters[$folder->name]['hour_start'], $parameters[$folder->name]['hour_finish']);
             if (Carbon::now()->hour > $parameters[$folder->name]['hour_start'] && Carbon::now()->hour < $parameters[$folder->name]['hour_finish']) {
-                //dd(44);
+
                 $check_timestamp = Carbon::now()->subHour($parameters[$folder->name]['alert_hours'])->timestamp;
 
-                //$date_check = $date_check_carbon->toDateString();
-                //$time_check = $date_check_carbon->toTimeString();
-                //dump($date_check . $time_check);
-
-                /*$not_exist_posts =
-                    DB::table('posts')
-                    ->whereDate('created_at', '>=', $date_check)
-                    ->whereTime('created_at', '>=', $time_check)
-                    ->where('station_id', '=', $station->id)
-                    ->where('alias', '=', $folder->name)
-                    ->where('result', '=', 1)
-                    ->doesntExist();*/
                 $not_exist_posts = DB::table('posts')
                     ->where('timestamp', '>=', $check_timestamp)
                     ->where('station_id', '=', $station->id)
@@ -242,38 +230,38 @@ class IndexController extends Controller
                     ->doesntExist();
                 if ($not_exist_posts) {
                     dump('немає постів');
-                    if ($this->checkMessage($station->id,$folder->name)){
+                    if ($this->checkMessage($station->id, $folder->name)) {
                         $messagesToMail[] = [
                             'ac' => $station->title,
                             'ac_id' => $station->id,
                             'alias' => $folder->title,
-                            'alias_name' =>$folder->name,
+                            'alias_name' => $folder->name,
                             'time' => $parameters[$folder->name]['alert_hours'],
                         ];
                     }
-                }else{
+                } else {
                     // -- перевірка якщо є пости після повідомлень про помилки, треба повідомити
                     // -- про появу завантаження
-                    if ($this->needEmailToSuccess($station->id, $folder->name)){
-                            $messagesToMail[] = [
-                                'ac' => $station->title,
-                                'ac_id' => $station->id,
-                                'alias' => $folder->title,
-                                'alias_name' =>$folder->name,
-                                'time' => $parameters[$folder->name]['alert_hours'],
-                                'success' => true,
-                            ];
-                            // --- оновити лічильник
-                            Message::where('count_for_send', 1)
-                                ->whereDate('created_at', '>=', $dateIgnore)
-                                ->where('alias',$folder->name)
-                                ->where('station_id',$station->id)
-                                ->update(['count_for_send' => 2]);
+                    if ($this->needEmailToSuccess($station->id, $folder->name)) {
+                        $messagesToMail[] = [
+                            'ac' => $station->title,
+                            'ac_id' => $station->id,
+                            'alias' => $folder->title,
+                            'alias_name' => $folder->name,
+                            'time' => $parameters[$folder->name]['alert_hours'],
+                            'success' => true,
+                        ];
+                        // --- оновити лічильник
+                        Message::where('count_for_send', 1)
+                            ->whereDate('created_at', '>=', $dateIgnore)
+                            ->where('alias', $folder->name)
+                            ->where('station_id', $station->id)
+                            ->update(['count_for_send' => 2]);
                     }
 
                     dump('є пости');
                 }
-            }else{
+            } else {
                 dump('не час моніторингу');
             }
 
@@ -281,6 +269,7 @@ class IndexController extends Controller
 
         return $messagesToMail;
     }
+
     /*
      *перевірка - якщо по вказаній АС та по вказаному типу завантаження
      * сьогодні вже повідомлення
@@ -289,28 +278,28 @@ class IndexController extends Controller
      */
     public function checkMessage($stationId, $folderName)
     {
-        return Message::where('station_id',$stationId)
-                            ->where('alias', $folderName)
-                            ->where('count_for_send', 1)
-                            ->whereDay('created_at', '=', Carbon::now()->day )
-                            ->doesntExist();
+        return Message::where('station_id', $stationId)
+            ->where('alias', $folderName)
+            ->where('count_for_send', 1)
+            ->whereDay('created_at', '=', Carbon::now()->day)
+            ->doesntExist();
 
     }
+
     public function saveMessage($messageToMail)
     {
-        //dump(Carbon::now()->day);
-        if(isset($messageToMail['success'])){
+        if (isset($messageToMail['success'])) {
             return;
         }
-        $message = Message::where('station_id',$messageToMail['ac_id'])
+        $message = Message::where('station_id', $messageToMail['ac_id'])
             ->where('alias', $messageToMail['alias_name'])
             ->where('count_for_send', 0)
-            ->whereDay('created_at', Carbon::now()->day )
+            ->whereDay('created_at', Carbon::now()->day)
             ->first();
-        //dump($message);
-        if ($message){
+
+        if ($message) {
             $message->update(['count_for_send' => 1]);
-        }else{
+        } else {
             Message::create([
                 'station_id' => $messageToMail['ac_id'],
                 'alias' => $messageToMail['alias_name'],
@@ -320,15 +309,29 @@ class IndexController extends Controller
 
     public function needEmailToSuccess($station_id, $folder_name)
     {
-        if ($this->errorMessages){
-            if($this->errorMessages
+        if ($this->errorMessages) {
+            if ($this->errorMessages
                     ->where('station_id', $station_id)
                     ->where('alias', $folder_name)
-                    ->count() > 0 ){
+                    ->count() > 0) {
                 return true;
             }
         }
         return false;
     }
 
+    public function createMessageSMS($messagesToMail)
+    {
+        $message = 'Це лист повідомлення ' . date("d-m-Y H:i:s");
+
+        foreach ($messagesToMail as $messageToMail) {
+            if (isset($messageToMail['success'])) {
+                $message .= 'Автостанція ' . $messageToMail['ac'] . ' вид синхронізації ' . $messageToMail['alias'] . ' синхронізація відновлена';
+            } else {
+                $message .= 'Автостанція ' . $messageToMail['ac'] . ' вид синхронізації ' . $messageToMail['alias'] . ' не було синхронізації ' . $messageToMail['time'] . 'годин';
+            }
+        }
+
+        return $message;
+    }
 }

@@ -18,7 +18,7 @@ class CreatePostsTable extends Migration
             $table->integer('result');
             $table->text('files');
             $table->string('error')->nullable();
-            $table->integer('type_error')->unsigned()->nullable();
+            $table->integer('category_id')->unsigned()->nullable();
             $table->string('alias');
             $table->integer('timestamp');
             $table->timestamps();

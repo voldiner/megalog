@@ -1,22 +1,14 @@
 <div class="card-header border-transparent">
-    @if($posts->count())
-        @isset($date,$ac)
-            <h3 class="card-title">Журнал за {{ $date }} по {{ $ac->title }}</h3>
-        @endisset
-        @isset($dateTime_from,$dateTime_to )
-            <h3 class="card-title">Помилки за період з {{ $dateTime_from }} по {{$dateTime_to}}</h3>
-        @endisset
-    @else
-        <h3 class="card-title">Інформація відсутня</h3>
-    @endif
-    {{--<div class="card-tools">
-        <button type="button" class="btn btn-tool" data-card-widget="collapse">
-            <i class="fas fa-minus"></i>
-        </button>
-        <button type="button" class="btn btn-tool" data-card-widget="remove">
-            <i class="fas fa-times"></i>
-        </button>
-    </div>--}}
+    @isset($date,$ac)
+        <h3 class="card-title">Журнал за {{ $date }} по {{ $ac->title }}@if(!$posts->count()) &rarr; Інформація відсутня @endif</h3>
+    @endisset
+    @isset($dateTime_from,$dateTime_to )
+        <h3 class="card-title">Помилки за період з {{ $dateTime_from }} по {{$dateTime_to}} @if(!$posts->count()) &rarr; Інформація відсутня @endif </h3>
+    @endisset
+
+    <div class="card-tools">
+        <a href="{{ route('home') }}" class="text-right">На головну</a>
+    </div>
 </div>
 <!-- /.card-header -->
 <div class="card-body p-0">
@@ -38,6 +30,7 @@
                     <td> {{ $loop->iteration }}</td>
                     <td>{{ $post->station->title }}</td>
                     <td width="30%">
+                        @isset($post->category->title)
                         <div class="accordion accordion-flush" id="accordionFlushExample">
                             <div class="accordion-item">
                                 <div class="accordion-header" id="flush-headingOne">
@@ -55,6 +48,9 @@
                                 </div>
                             </div>
                         </div>
+                        @else
+                            <span class="badge badge-success">Успішно</span>
+                        @endisset
                     </td>
                     <td><span class="badge badge-danger">{{ $post->folder->title }}</span></td>
                     <td>
