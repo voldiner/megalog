@@ -59,8 +59,6 @@ class UploadController extends Controller
 
     public function showGraf(Request $request)
     {
-
-        // return response()->json($request->all(), 200);
         // ------- validation -------- //
         $rules = [
             'ac-name' => 'required|integer',
