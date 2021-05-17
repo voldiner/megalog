@@ -47,7 +47,7 @@ class IndexController extends Controller
         $date_p = Carbon::createFromTimestamp(time());
 
         $posts_error = DB::table('posts')
-            ->whereDay('created_at', '=', $date_p->day)
+            ->whereDate('created_at', '=', $date_p->toDateString())
             ->where('result', '=', 0)
             ->count();
 
