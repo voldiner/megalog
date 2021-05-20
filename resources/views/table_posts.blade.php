@@ -25,9 +25,10 @@
             </tr>
             </thead>
             <tbody>
+            @php $start_num = ($posts->currentPage()-1)* $posts->perpage() + 1 @endphp
             @foreach($posts as $post)
                 <tr>
-                    <td> {{ $loop->iteration }}</td>
+                    <td> {{ $start_num++ }}</td>
                     <td>{{ $post->station->title }}</td>
                     <td width="30%">
                         @isset($post->category->title)

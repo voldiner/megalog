@@ -52,7 +52,7 @@ class IndexController extends Controller
             ->count();
 
         $posts_success = DB::table('posts')
-            ->whereDay('created_at', '=', $date_p->day)
+            ->whereDate('created_at', '=', $date_p->toDateString())
             ->where('result', '=', 1)
             ->count();
 
@@ -180,7 +180,7 @@ class IndexController extends Controller
         $this->errorMessages = Message::where('count_for_send', 1)
             ->whereDate('created_at', '>=', $dateIgnore)
             ->get();
-        dump($this->errorMessages);
+        //dump($this->errorMessages);
 
         foreach ($stations as $station) {
             $checkStation = $this->checkStation($station, $folders, $parameters, $dateIgnore);
@@ -191,7 +191,7 @@ class IndexController extends Controller
         }
 
         if ($messagesToMail) {
-            dump($messagesToMail);
+            //dump($messagesToMail);
             Mail::to($parameters['email_alert'])->send(new ControlMail($messagesToMail));
 
             if ($parameters['sendSMS']) {
@@ -199,13 +199,13 @@ class IndexController extends Controller
                 $turboSMS->send($parameters['phones'], $this->createMessageSMS($messagesToMail));
             }
 
-            dump('висилаю пошту -> !');
+            //dump('висилаю пошту -> !');
             foreach ($messagesToMail as $messageToMail) {
                 $this->saveMessage($messageToMail);
             }
             return response()->json(['success' => true, 'message_send' => true], 200);
         }
-        dump('все нормально !');
+        //dump('все нормально !');
         return response()->json(['success' => true, 'message_send' => false], 200);
 
 
@@ -216,8 +216,8 @@ class IndexController extends Controller
 
         $messagesToMail = false;
         foreach ($folders as $folder) {
-            dump($folder->name);
-            dump($parameters[$folder->name]['hour_start'], $parameters[$folder->name]['hour_finish']);
+            //dump($folder->name);
+            //dump($parameters[$folder->name]['hour_start'], $parameters[$folder->name]['hour_finish']);
             if (Carbon::now()->hour > $parameters[$folder->name]['hour_start'] && Carbon::now()->hour < $parameters[$folder->name]['hour_finish']) {
 
                 $check_timestamp = Carbon::now()->subHour($parameters[$folder->name]['alert_hours'])->timestamp;
@@ -229,7 +229,7 @@ class IndexController extends Controller
                     ->where('result', '=', 1)
                     ->doesntExist();
                 if ($not_exist_posts) {
-                    dump('немає постів');
+                    //dump('немає постів');
                     if ($this->checkMessage($station->id, $folder->name)) {
                         $messagesToMail[] = [
                             'ac' => $station->title,
@@ -259,10 +259,10 @@ class IndexController extends Controller
                             ->update(['count_for_send' => 2]);
                     }
 
-                    dump('є пости');
+                    //dump('є пости');
                 }
             } else {
-                dump('не час моніторингу');
+                //dump('не час моніторингу');
             }
 
         }
