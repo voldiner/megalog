@@ -22,3 +22,7 @@ Route::get('/postsSort', 'UploadController@postsSort')->name('postsSort');
 
 
 
+
+Auth::routes();
+
+Route::get('/home', 'HomeController@index')->name('home');
