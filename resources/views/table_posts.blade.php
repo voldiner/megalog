@@ -7,7 +7,7 @@
     @endisset
 
     <div class="card-tools">
-        <a href="{{ route('home') }}" class="text-right">На головну</a>
+        <a href="{{ route('index') }}" class="text-right">На головну</a>
     </div>
 </div>
 <!-- /.card-header -->
