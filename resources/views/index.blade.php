@@ -64,13 +64,6 @@
                             <small>повна інформація по синхронізації</small>
                         </h1>
                     </div><!-- /.col -->
-                {{--<div class="col-sm-6">--}}
-                <!--<ol class="breadcrumb float-sm-right">
-                          <li class="breadcrumb-item"><a href="#">Home</a></li>
-                          <li class="breadcrumb-item"><a href="#">Layout</a></li>
-                          <li class="breadcrumb-item active">Top Navigation</li>
-                        </ol>-->
-                    {{--</div><!-- /.col -->--}}
                 </div><!-- /.row -->
             </div><!-- /.container-fluid -->
         </div>
@@ -184,7 +177,7 @@
                                                 Успішні сихронізації
                                             </label>
                                         </div>
-                                        <div class="icheck-danger d-inline">
+                                        <div class="icheck-danger d-inline mb-4">
                                             <input type="radio" class="radioPrimary" data-radio="error"
                                                    id="radioPrimary2" name="r1" @if(isset($old_param->r_input) && $old_param->r_input == 'error') checked @endif>
                                             <label for="radioPrimary2">
@@ -192,12 +185,12 @@
                                             </label>
                                         </div>
                                     </div>
-                                    <button id="btn-submit" class="btn btn-block btn-primary" type="submit">Побудувати
+                                    <button id="btn-submit" class="btn btn-block btn-primary mb-3" type="submit">Побудувати
                                         графік
                                     </button>
                                 </form>
-                                <a href="#" class="card-link">Card link</a>
-                                <a href="#" class="card-link">Another link</a>
+                               {{-- <a href="#" class="card-link">Card link</a>
+                                <a href="#" class="card-link">Another link</a>--}}
                             </div>
                         </div>
 

@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/','IndexController@index')->name('home');
+Route::get('/','IndexController@index')->name('index');
 
 Route::get('/posts', 'IndexController@getPostsFromDates')->name('getPostsFromDates');
 Route::get('/control', 'IndexController@control');
@@ -22,3 +22,7 @@ Route::get('/postsSort', 'UploadController@postsSort')->name('postsSort');
 
 
 
+
+Auth::routes();
+
+Route::get('/home', 'HomeController@index')->name('home');

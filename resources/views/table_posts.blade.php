@@ -7,7 +7,7 @@
     @endisset
 
     <div class="card-tools">
-        <a href="{{ route('home') }}" class="text-right">На головну</a>
+        <a href="{{ route('index') }}" class="text-right">На головну</a>
     </div>
 </div>
 <!-- /.card-header -->
@@ -25,9 +25,10 @@
             </tr>
             </thead>
             <tbody>
+            @php $start_num = ($posts->currentPage()-1)* $posts->perpage() + 1 @endphp
             @foreach($posts as $post)
                 <tr>
-                    <td> {{ $loop->iteration }}</td>
+                    <td> {{ $start_num++ }}</td>
                     <td>{{ $post->station->title }}</td>
                     <td width="30%">
                         @isset($post->category->title)
