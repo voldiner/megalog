@@ -1,7 +1,10 @@
 
+
 ## Про Megalog
 
+
 Megalog - це проект практичного спрямування, створений для контролю завантаження інформації з серверів продажу квтитків на автостанціях ПрАТ "ВОПАС" на сайт https://vopas.com.ua для подальшого використання цієї інформації при продажу квитків через даний сайт чи через інші сайти з використанням АРІ.  
+
 
 - [Simple, fast routing engine](https://laravel.com/docs/routing).
 - [Powerful dependency injection container](https://laravel.com/docs/container).
