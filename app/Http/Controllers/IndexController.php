@@ -102,7 +102,7 @@ class IndexController extends Controller
             $orderBy = 'station_id';
         }
 
-        $posts = Post::whereDay('created_at', '=', substr($request->to, 8, 2))
+        $posts = Post::whereDate('created_at', '=', substr($request->to, 0, 10))
             ->where('result', '=', 0)
             ->with(['station', 'category', 'folder'])
             ->orderBy($orderBy)
