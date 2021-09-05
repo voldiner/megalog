@@ -3,13 +3,13 @@
 return array(
 
     // registered login at http://turbosms.ua/
-    'login' => 'smsvopas',
+    'login' => '',
 	
     // registered password at http://turbosms.ua/
-    'password' => '10799vat',
+    'password' => '',
 	
     // registered sender at http://turbosms.ua/
-    'sender' => 'vopas',
+    'sender' => '',
 	
     // options for SOAP Client, proxy or else, more here http://php.net/manual/ru/soapclient.soapclient.php
     'options' => [],

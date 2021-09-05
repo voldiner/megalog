@@ -17,11 +17,6 @@ class MegalogMiddleware
      */
     public function handle($request, Closure $next)
     {
-        /*$password = User::where('name',$request->input('login'))->first()->password;
-
-        if ($request->input('password') === $password){
-           return $next($request);
-       }*/
         // --- аутентификация
         if (Auth::attempt([
             'email' => $request->input('login'),

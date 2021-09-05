@@ -48,7 +48,7 @@ class UploadController extends Controller
         try {
             $result = Post::create($post);
         } catch (Exception $exception) {
-            return response()->json(['error' => true, 'message' => $exception->getMessage()], 401);
+            return response()->json(['error' => true, 'message' => $exception->getMessage()], 503);
         }
 
         if ($result) {

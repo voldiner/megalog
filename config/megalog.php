@@ -13,7 +13,7 @@ return [
     // -- перелік типів завантажень які моніторяться
     'category' => ['ftp', 'upload', 'free', 'reg'],
     // -- email for sending alerts
-    'email_alert' => 'yura.voldiner@gmail.com',
+    'email_alert' => 'yourmail@gmail.com',
     // -- не повідомляти про відновлення процесів, старших за (днів)
     'day_success_email' => 5,
     // -- відправляти СМС (через турбоСМС) необхідно прописати параметри додатково в файлі config\turbosms.php

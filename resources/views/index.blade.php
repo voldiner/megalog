@@ -368,7 +368,7 @@
                     "folder": $('#folder').val(),
                     "r-input": $('.radioPrimary:checked').data("radio")
                 };
-                console.log(data);
+                //console.log(data);
                 var cookie_value = JSON.stringify(data);
 
                 $.ajax({
@@ -379,8 +379,6 @@
                     success: function (data) {
                         $('#alert-valid').addClass('no-display-alert');
                         $.cookie('parameters', cookie_value, {expires: 30});
-                        //console.log(data);
-                        // return;
                         // ----- будуємо графік ---------------------
                         var areaChartData = {
                             labels: data.labels,
@@ -403,11 +401,6 @@
                         //-------------
                         var barChartCanvas = $('#barChart').get(0).getContext('2d');
                         var barChartData = jQuery.extend(true, {}, areaChartData);
-                        //var temp0 = areaChartData.datasets[0];
-                        //var temp1 = areaChartData.datasets[1];
-
-                        //barChartData.datasets[0] = temp1;
-                        //barChartData.datasets[1] = temp0;
 
                         var barChartOptions = {
                             responsive: true,
@@ -426,7 +419,6 @@
                     },
                     error: function (jqXHR, textStatus, errorThrown) {
                         var http_kod = jqXHR.status;
-                        //console.log(jqXHR.getResponseHeader('megalog'));
                         // ---- розшифровуємо тільки помилки що повертає скрипт --- //
                         var title = 'Невідома помилка -> http kod ' + http_kod;
                         var content = '';
@@ -469,8 +461,6 @@
                 tags: true
 
             });
-
-            //setMessage();
 
             //Date range picker
             $('#reservationdate-input').daterangepicker(
