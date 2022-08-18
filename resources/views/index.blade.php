@@ -200,8 +200,13 @@
                             <span class="info-box-icon bg-success elevation-1"><i class="fas fa-thumbs-up"></i></span>
                             <div class="info-box-content">
                                 <p>{{$message}}</p>
-                                <span class="info-box-text">Вдалих завантажень </span>
-                                <span class="info-box-number">{{ $posts_success }}</span>
+                                <span class="info-box-number">Вдалих завантажень {{ $postSuccessAll }}</span>
+                                {{--<span class="info-box-number">{{ $postSuccessAll }}</span>--}}
+                                @if(!empty($postsSuccessAC))
+                                        @foreach($postsSuccessAC as $key => $value)
+                                        <span class="info-box-text">{{ $key }} - {{ $value }}</span>
+                                        @endforeach
+                                @endif
                             </div>
                             <!-- /.info-box-content -->
                         </div>

@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use phpDocumentor\Reflection\Types\Collection;
 use Uapixart\LaravelTurbosms\Turbosms;
 
 class IndexController extends Controller
@@ -51,10 +52,14 @@ class IndexController extends Controller
             ->where('result', '=', 0)
             ->count();
 
-        $posts_success = DB::table('posts')
+        $posts_success = Post::
+        select('station_id')
             ->whereDate('created_at', '=', $date_p->toDateString())
             ->where('result', '=', 1)
-            ->count();
+            ->get();
+
+        $postSuccessAll = $posts_success->count();
+        $posts_success = $posts_success->countBy('station_id');
 
 
         $message = 'за ' . ($date_s->diffForHumans($date_p)) . ' ' . $date_p->toDateTimeString();
@@ -62,10 +67,13 @@ class IndexController extends Controller
         $folders = Folder::all()->pluck('title', 'name');
         $categories = Category::all()->pluck('title', 'id');
         $stations = Station::all()->pluck('title', 'id');
+        $postsSuccessAC = $this->postSuccessAC($posts_success, $stations);
+
         return view('index', compact('maxDate',
             'startDate',
             'endDate',
-            'posts_success',
+            'postSuccessAll',
+            'postsSuccessAC',
             'posts_error',
             'message',
             'folders',
@@ -333,5 +341,25 @@ class IndexController extends Controller
         }
 
         return $message;
+    }
+
+    /**
+     * створює масив з назвами автостанцій і кількістю успішних синхронізацій по кожній
+     * з них
+     * @param Collection $posts_success
+     * @param Collection $stations
+     */
+    public function postSuccessAC($posts_success, $stations)
+    {
+        $result = [];
+        foreach ($posts_success as $key => $value){
+
+            if (isset($stations[$key])){
+                $newKey = $stations[$key];
+                $result[$newKey] = $value;
+            }
+        }
+        arsort($result);
+        return $result;
     }
 }

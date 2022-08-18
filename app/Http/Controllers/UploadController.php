@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Uapixart\LaravelTurbosms\Turbosms;
 
 class UploadController extends Controller
 {
@@ -52,6 +53,9 @@ class UploadController extends Controller
         }
 
         if ($result) {
+            if ($post['category_id'] == 5){
+                $this->sendSMS($post['station_id']);
+            }
             return response()->json($result, 200);
         }
 
@@ -81,7 +85,7 @@ class UploadController extends Controller
         if ($dates[0]->diffInDays($dates[1]) > 31) {
             return response()->json(['error' => 'validation error', 'message' => ['Період не більше 31 дня']], 400)->withHeaders(['megalog' => 'errorMegalog']);
         }
-        
+
         $query = DB::table('posts')
             ->whereDate('created_at', '>=', $dates[0]->toDateString())
             ->whereDate('created_at', '<=', $dates[1]->toDateString());
@@ -135,4 +139,19 @@ class UploadController extends Controller
 
     }
 
+    /**
+     * @param int $station_id
+     */
+    public function sendSMS($station_id)
+    {
+        $permission = config('megalog.sendSmsStart', false);
+        if ($permission) {
+
+            $phones = config('megalog.phones', []);
+            $nameStation = Station::find($station_id) ? Station::find($station_id)->title : 'Невідома АС';
+            $messagesToMail = 'script start message from AC ' . $nameStation;
+            $turboSMS = new Turbosms();
+            $turboSMS->send($phones, $messagesToMail);
+        }
+    }
 }
